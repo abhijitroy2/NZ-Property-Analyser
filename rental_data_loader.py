@@ -81,14 +81,14 @@ def normalize_district_name(district: str) -> str:
 
 def get_upper_quartile_rent(district: str) -> Optional[float]:
     """
-    Get Upper Quartile Rent for a given district.
+    Get Geometric Mean Rent for a given district.
     Matches district from input file to Location in rental data by latest date.
     
     Args:
         district: District name from property data
         
     Returns:
-        Upper Quartile Rent value, or None if not found
+        Geometric Mean Rent value, or None if not found
     """
     if not district or pd.isna(district):
         return None
@@ -138,19 +138,19 @@ def get_upper_quartile_rent(district: str) -> Optional[float]:
             return None
         
         # Get the first match (should be unique for a district)
-        upper_quartile_rent = match.iloc[0]['Upper Quartile Rent']
+        geometric_mean_rent = match.iloc[0]['Geometric Mean Rent']
         
         # Handle if it's a string with commas
-        if isinstance(upper_quartile_rent, str):
-            upper_quartile_rent = upper_quartile_rent.replace(',', '')
+        if isinstance(geometric_mean_rent, str):
+            geometric_mean_rent = geometric_mean_rent.replace(',', '')
         
         try:
-            return float(upper_quartile_rent)
+            return float(geometric_mean_rent)
         except (ValueError, TypeError):
-            logger.warning(f"Could not convert Upper Quartile Rent to float: {upper_quartile_rent}")
+            logger.warning(f"Could not convert Geometric Mean Rent to float: {geometric_mean_rent}")
             return None
         
     except Exception as e:
-        logger.error(f"Error getting Upper Quartile Rent for district '{district}': {str(e)}")
+        logger.error(f"Error getting Geometric Mean Rent for district '{district}': {str(e)}")
         return None
 

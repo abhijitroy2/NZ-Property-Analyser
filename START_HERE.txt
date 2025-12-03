@@ -1,0 +1,48 @@
+================================================================================
+                    NZ PROPERTY ANALYSER - START HERE
+================================================================================
+
+QUICKEST WAY TO RUN:
+-------------------
+1. Double-click: run_flip.bat (for flip mode)
+   OR
+   Double-click: run_rental.bat (for rental mode)
+
+2. Wait 1-2 seconds
+
+3. Check the "output" folder for your results Excel file
+
+
+COMMAND LINE WAY:
+----------------
+Open PowerShell in this folder, then run:
+
+    python main.py residential_sale.xlsx --mode flip --background
+
+    OR
+
+    python main.py residential_sale.xlsx --mode rental --background
+
+
+WHAT YOU NEED:
+-------------
+✓ Excel file in the "input" folder (residential_sale.xlsx is already there)
+✓ Python installed (already done)
+✓ Dependencies installed (run: pip install -r requirements.txt if needed)
+
+
+WHERE TO FIND RESULTS:
+---------------------
+✓ Excel results → "output" folder
+✓ Log files → "logs" folder
+
+
+FOR MORE DETAILS:
+----------------
+Read: HOW_TO_RUN.md (detailed walkthrough)
+Read: README.md (full documentation)
+Read: QUICK_START.md (step-by-step guide)
+
+
+================================================================================
+
