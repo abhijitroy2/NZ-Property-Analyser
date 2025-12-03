@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/*.log
+*.log
+
+# Output files (keep folder structure)
+output/*.xlsx
+output/*.xls
+
+# Input files (keep folder structure, but ignore actual data files)
+input/*.xlsx
+input/*.xls
+input/*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Plan files
+*.plan.md
+
+# Keep folder structure but ignore contents
+!logs/.gitkeep
+!output/.gitkeep
+!input/.gitkeep
+
