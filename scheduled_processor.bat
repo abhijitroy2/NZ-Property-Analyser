@@ -233,6 +233,39 @@ if %EMAIL_COUNT% EQU 0 (
 echo Found %EMAIL_COUNT% email address(es)
 echo.
 
+REM Generate Executive Summary
+echo Generating Executive Summary...
+set "EXECUTIVE_SUMMARY=%OUTPUT_FOLDER%\Executive_Summary_%DATETIME%.xlsx"
+"%PYTHON_PATH%" "%SCRIPT_DIR%generate_executive_summary.py" "%OUTPUT_FOLDER%" "Executive_Summary_%DATETIME%.xlsx"
+if !ERRORLEVEL! NEQ 0 (
+    echo WARNING: Failed to generate Executive Summary
+    set "EXECUTIVE_SUMMARY="
+) else (
+    echo Executive Summary created: Executive_Summary_%DATETIME%.xlsx
+)
+echo.
+
+REM Convert Markdown documentation to PDF
+echo Converting documentation to PDF...
+set "DOC_PDF=%OUTPUT_FOLDER%\Calculation_Guide.pdf"
+"%PYTHON_PATH%" "%SCRIPT_DIR%convert_md_to_pdf.py" "%SCRIPT_DIR%CALCULATION_GUIDE.md" "%DOC_PDF%"
+if !ERRORLEVEL! NEQ 0 (
+    echo WARNING: Failed to convert documentation to PDF
+    set "DOC_PDF="
+) else (
+    echo Documentation PDF created: Calculation_Guide.pdf
+)
+echo.
+
+REM Extract good deals information for email body
+echo Extracting good deals information...
+set "GOOD_DEALS_FILE=%TEMP%\good_deals_%RANDOM%.txt"
+if exist "%EXECUTIVE_SUMMARY%" (
+    "%PYTHON_PATH%" "%SCRIPT_DIR%extract_good_deals_info.py" "%EXECUTIVE_SUMMARY%" > "%GOOD_DEALS_FILE%" 2>nul
+) else (
+    echo No Executive Summary available. > "%GOOD_DEALS_FILE%"
+)
+
 REM Create PowerShell script to send email via Outlook COM
 echo Creating email script...
 
@@ -279,6 +312,15 @@ echo         $body += "Output files:`n%OUTPUT_LIST%`n"
 echo     } else {
 echo         $body += "WARNING: No output files were generated.`n"
 echo     }
+echo     $body += "`n`n"
+echo     # Read good deals info from file
+echo     $goodDealsFile = "%GOOD_DEALS_FILE%"
+echo     if (Test-Path $goodDealsFile^) {
+echo         $goodDealsInfo = Get-Content $goodDealsFile -Raw
+echo         $body += $goodDealsInfo
+echo     } else {
+echo         $body += "No good deals information available.`n"
+echo     }
 echo     $mail.Body = $body
 echo.
 echo     # Set sender display name to "Property Analyser"
@@ -304,6 +346,17 @@ echo     }
 echo.
 echo     # Add attachments
 ) > "%TEMP_EMAIL_SCRIPT%"
+
+REM Add attachments
+REM First, attach Executive Summary if it exists
+if exist "%EXECUTIVE_SUMMARY%" (
+    echo     $mail.Attachments.Add("%EXECUTIVE_SUMMARY%"^) >> "%TEMP_EMAIL_SCRIPT%"
+)
+
+REM Attach PDF documentation if it exists
+if exist "%DOC_PDF%" (
+    echo     $mail.Attachments.Add("%DOC_PDF%"^) >> "%TEMP_EMAIL_SCRIPT%"
+)
 
 REM Add attachments for each new output file
 if %OUTPUT_COUNT% GTR 0 (
@@ -345,8 +398,9 @@ echo Sending email via Outlook...
 powershell.exe -ExecutionPolicy Bypass -File "%TEMP_EMAIL_SCRIPT%"
 set "EMAIL_ERROR=!ERRORLEVEL!"
 
-REM Clean up temp script
+REM Clean up temp files
 del "%TEMP_EMAIL_SCRIPT%" >nul 2>&1
+if exist "%GOOD_DEALS_FILE%" del "%GOOD_DEALS_FILE%" >nul 2>&1
 
 if !EMAIL_ERROR! EQU 0 (
     echo Email sent successfully!
