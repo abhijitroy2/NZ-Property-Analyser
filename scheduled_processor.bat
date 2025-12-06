@@ -34,7 +34,10 @@ exit /b %ERRORLEVEL%
 
 :main
 REM Main script execution starts here
+REM Change to script directory to ensure relative paths work correctly
+cd /d "%SCRIPT_DIR%"
 echo [%TIME%] Starting scheduled processor execution...
+echo [%TIME%] Working directory: %CD%
 echo.
 
 REM Try to find Python
@@ -247,15 +250,15 @@ if exist "%NEW_FILES_LIST%" (
     )
 )
 
-REM Create PowerShell script
+REM Create PowerShell script - write directly to avoid echo issues
 (
 echo $ErrorActionPreference = "Continue"
 echo try {
 echo     Write-Host "Connecting to Outlook..."
 echo     $outlook = New-Object -ComObject Outlook.Application
 echo     $mail = $outlook.CreateItem(0^)
-echo     
-echo     REM Set recipients - split by semicolon and add each one
+echo.
+echo     # Set recipients - split by semicolon and add each one
 echo     $recipients = "%EMAIL_RECIPIENTS%"
 echo     $recipientArray = $recipients -split ";"
 echo     foreach ($recipient in $recipientArray^) {
@@ -265,7 +268,7 @@ echo             $mail.Recipients.Add($recipient^)
 echo             Write-Host "Added recipient: $recipient"
 echo         }
 echo     }
-echo     
+echo.
 echo     $mail.Subject = "NZ Property Analyser - Scheduled Run Results"
 echo     $body = "Scheduled property analysis run completed.`n`n"
 echo     $body += "Input files processed: %FILE_COUNT%`n"
@@ -277,17 +280,17 @@ echo     } else {
 echo         $body += "WARNING: No output files were generated.`n"
 echo     }
 echo     $mail.Body = $body
-echo     
-echo     REM Set sender display name to "Property Analyser"
+echo.
+echo     # Set sender display name to "Property Analyser"
 echo     try {
 echo         $namespace = $outlook.GetNamespace("MAPI"^)
 echo         $accounts = $namespace.Accounts
 echo         if ($accounts.Count -gt 0^) {
 echo             $account = $accounts[0]
-echo             REM Try to set sender display name using PropertyAccessor
+echo             # Try to set sender display name using PropertyAccessor
 echo             try {
 echo                 $pa = $mail.PropertyAccessor
-echo                 REM Set the sender name property (PR_SENDER_NAME)
+echo                 # Set the sender name property
 echo                 $senderNameProp = "http://schemas.microsoft.com/mapi/proptag/0x0C1A001E"
 echo                 $pa.SetProperty($senderNameProp, "Property Analyser"^)
 echo                 Write-Host "Set sender display name to 'Property Analyser'"
@@ -298,7 +301,8 @@ echo         }
 echo     } catch {
 echo         Write-Host "Warning: Could not access Outlook accounts: $_"
 echo     }
-echo     
+echo.
+echo     # Add attachments
 ) > "%TEMP_EMAIL_SCRIPT%"
 
 REM Add attachments for each new output file
@@ -320,17 +324,17 @@ if %OUTPUT_COUNT% GTR 0 (
 REM Clean up new files list
 if exist "%NEW_FILES_LIST%" del "%NEW_FILES_LIST%" >nul 2>&1
 
-REM Complete the PowerShell script
+REM Complete the PowerShell script - close try block and add catch
 (
-echo     
+echo.
 echo     Write-Host "Sending email..."
 echo     $mail.Send^(^)
 echo     Write-Host "Email sent successfully to all recipients"
 echo } catch {
 echo     Write-Host "ERROR sending email: $_"
-echo     Write-Host "Error details: $($_.Exception.Message^)"
+echo     Write-Host "Error details: $($_.Exception.Message)"
 echo     if ($_.Exception.InnerException^) {
-echo         Write-Host "Inner exception: $($_.Exception.InnerException.Message^)"
+echo         Write-Host "Inner exception: $($_.Exception.InnerException.Message)"
 echo     }
 echo     exit 1
 echo }
