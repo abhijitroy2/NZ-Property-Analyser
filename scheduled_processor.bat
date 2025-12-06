@@ -10,6 +10,7 @@ REM Set paths
 set "SCRIPT_DIR=%~dp0"
 set "INPUT_FOLDER=%SCRIPT_DIR%input"
 set "OUTPUT_FOLDER=%SCRIPT_DIR%output"
+set "EMAIL_LIST=%SCRIPT_DIR%email_list.txt"
 set "TEMP_EMAIL_SCRIPT=%TEMP%\send_email_%RANDOM%.ps1"
 
 REM Try to find Python
@@ -133,6 +134,47 @@ if %OUTPUT_COUNT% EQU 0 (
 echo Found %OUTPUT_COUNT% output file(s)
 echo.
 
+REM Check if email list file exists
+if not exist "%EMAIL_LIST%" (
+    echo ERROR: Email list file not found: %EMAIL_LIST%
+    echo Please create email_list.txt with one email address per line.
+    exit /b 1
+)
+
+REM Read email addresses from email_list.txt
+echo Reading email addresses from email_list.txt...
+set "EMAIL_RECIPIENTS="
+set "EMAIL_COUNT=0"
+for /f "usebackq delims=" %%E in ("%EMAIL_LIST%") do (
+    set "EMAIL_LINE=%%E"
+    REM Skip empty lines
+    if defined EMAIL_LINE (
+        REM Remove leading/trailing whitespace
+        for /f "tokens=*" %%L in ("!EMAIL_LINE!") do set "EMAIL_LINE=%%L"
+        if defined EMAIL_LINE (
+            REM Check if it's a valid email (contains @)
+            echo !EMAIL_LINE! | findstr "@" >nul 2>&1
+            if !ERRORLEVEL! EQU 0 (
+                if defined EMAIL_RECIPIENTS (
+                    set "EMAIL_RECIPIENTS=!EMAIL_RECIPIENTS!;!EMAIL_LINE!"
+                ) else (
+                    set "EMAIL_RECIPIENTS=!EMAIL_LINE!"
+                )
+                set /a EMAIL_COUNT+=1
+                echo   - !EMAIL_LINE!
+            )
+        )
+    )
+)
+
+if %EMAIL_COUNT% EQU 0 (
+    echo ERROR: No valid email addresses found in email_list.txt
+    exit /b 1
+)
+
+echo Found %EMAIL_COUNT% email address(es)
+echo.
+
 REM Create PowerShell script to send email via Outlook COM
 echo Creating email script...
 
@@ -148,13 +190,32 @@ echo $ErrorActionPreference = "Stop"
 echo try {
 echo     $outlook = New-Object -ComObject Outlook.Application
 echo     $mail = $outlook.CreateItem(0^)
-echo     $mail.To = "abbey.roy@gmail.com"
+echo     $mail.To = "%EMAIL_RECIPIENTS%"
 echo     $mail.Subject = "NZ Property Analyser - Scheduled Run Results"
 echo     $body = "Scheduled property analysis run completed.`n`n"
 echo     $body += "Files processed: %FILE_COUNT%`n"
 echo     $body += "Output files generated: %OUTPUT_COUNT%`n`n"
 echo     $body += "Input files processed:`n%PROCESSED_LIST%`n"
 echo     $mail.Body = $body
+echo     REM Set sender display name to "Property Analyser"
+echo     $namespace = $outlook.GetNamespace("MAPI"^)
+echo     $accounts = $namespace.Accounts
+echo     if ($accounts.Count -gt 0^) {
+echo         $account = $accounts[0]
+echo         $senderEmail = $account.SmtpAddress
+echo         if ([string]::IsNullOrEmpty($senderEmail^)^) {
+echo             $senderEmail = $account.UserName
+echo         }
+echo         REM Try to set sender display name using PropertyAccessor
+echo         try {
+echo             $pa = $mail.PropertyAccessor
+echo             REM Set the sender name property (PR_SENDER_NAME)
+echo             $senderNameProp = "http://schemas.microsoft.com/mapi/proptag/0x0C1A001E"
+echo             $pa.SetProperty($senderNameProp, "Property Analyser"^)
+echo         } catch {
+echo             REM If property setting fails, email will still send with default sender name
+echo         }
+echo     }
 echo     
 ) > "%TEMP_EMAIL_SCRIPT%"
 
